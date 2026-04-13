@@ -10,9 +10,13 @@
 export const classify = async (req, res) => {
 
     try {
+        // Checks if name parameter is empty
         const name = req.query.name
         if (!name || name === '') {
-            return res.status(400).json({message: 'Error: Please inpute a valid name'})
+            return res.status(400).json({message: 'Bad request: Please inpute a valid name'})
+        }
+        if (typeof(name) === '') {
+            return res.status(422).json({message: 'Unprocessed Entity'})
         }
             
         const response = await fetch(`https://api.genderize.io/?name=${name}`);
@@ -23,20 +27,28 @@ export const classify = async (req, res) => {
 
         const data = await response.json()
 
-        const processedName = {
-            requstedName: data.name,
-            gender: data.gender,
-            Possibility: data.probability *100 + '%'
+        if (data.name === null || data.count === 0) {
+            res.json({status: "error", message: "No prediction available for the provided name"})
         }
 
+        const processedName = {
+            name: data.name,
+            gender: data.gender,
+            probability: data.probability,
+            sample_size: data.count,
+            is_confident: (data.probability >= 0.7) && (data.count >= 100) ? 'true': 'false',
+            processed_at: Date("now").toString
+        }
+
+
         res.status(200).json({
-            message: 'successful',
+            status: 'successful',
             data: processedName,
         })
 
     } catch (error) {
         console.error(error)
-        res.status(500).json({message: "Server error", error})
+        res.status(500).json({status: "error", message: "Server error"})
     }
 };
 
